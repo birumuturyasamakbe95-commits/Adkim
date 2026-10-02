@@ -87,9 +87,9 @@
             end
             end
             end
-            local antiDieSources = { autobat = false }
+            local antiDieSources = { autobat = false, manual = false }
             local function refreshAntiDie()
-            setAntiDieEnabled(antiDieSources.autobat)
+            setAntiDieEnabled(antiDieSources.autobat == true or antiDieSources.manual == true)
             end
 
             _G.__zurichAntiDieSource = function(source, enabled)
@@ -569,6 +569,7 @@
             end
             local selectedMode = "Normal"
             local autoBatMode = "V1"
+            _G.__ZurichAimbotMode = _G.__ZurichAimbotMode or "Normal"
             local autoBatCollisionMode = "V1"
             local autoBatV3Mode = "V2"
             _G.__ZurichAutoBatV3Mode = "V2"
@@ -859,6 +860,7 @@
             ["Custom FOV"] = false,
             ["Stretch Rez"] = false,
             ["Auto TP Down"] = false,
+            ["Anti Die"] = false,
             }
             for k, v in pairs(toggleDefaults) do toggleStates[k] = v end
 
@@ -896,6 +898,7 @@
             table.insert(lines, "M:selectedMode=" .. selectedMode)
             table.insert(lines, "M:autoBatModeSchema=2")
             table.insert(lines, "M:autoBatMode=" .. autoBatMode)
+            table.insert(lines, "M:aimbotMode=" .. tostring(_G.__ZurichAimbotMode or "Normal"))
             table.insert(lines, "M:autoBatCollisionMode=" .. autoBatCollisionMode)
             table.insert(lines, "M:autoBatV3Mode=" .. autoBatV3Mode)
             table.insert(lines, "M:autoBatTpDistance=" .. tostring(autoBatTpDistance))
@@ -1070,10 +1073,15 @@
             if v == "Normal" or v == "Lagger" or v == "Desync" then selectedMode = v end
             elseif k == "autoBatModeSchema" then
             _G.__ZurichAutoBatModeSchema = tonumber(v) or 1
+            elseif k == "aimbotMode" then
+            if v == "Normal" or v == "Bypass" then _G.__ZurichAimbotMode = v end
             elseif k == "autoBatMode" then
             if v == "V1" or v == "V2" or v == "V3" or v == "Config" or v == "Perso" or v == "Bypass" then
             if v == "Config" or (v == "V3" and (_G.__ZurichAutoBatModeSchema or 1) < 2) then
             autoBatMode = "Perso"
+            elseif v == "Bypass" then
+            autoBatMode = "V1"
+            _G.__ZurichAimbotMode = "Bypass"
             else
             autoBatMode = v
             end
@@ -7732,17 +7740,59 @@
             if active then
             if _G.__stopSpeedBoost then _G.__stopSpeedBoost() end
             if autoplayActive or toggleStates["Autoplay"] then
-            _G.__stopAutoplay()
+            pcall(function() if _G.__stopAutoplay then _G.__stopAutoplay() end end)
             end
             deactivateOtherAimbots("Aimbot")
             if _G.__deactivateBatExclusive then _G.__deactivateBatExclusive("Aimbot") end
+            if (_G.__ZurichAimbotMode or "Normal") == "Bypass" then
+            pcall(function() if _cypherStop then _cypherStop() end end)
+            -- enable bypass aimbot engine (shared)
+            if _G.__ZurichStartBypassAimbot then
+            -- Bypass tick checks abatState — force via dedicated aimbot flag
+            _G.__ZurichBypassAimbotFromAimbot = true
+            pcall(_G.__ZurichStartBypassAimbot)
+            end
+            else
+            _G.__ZurichBypassAimbotFromAimbot = false
+            if _G.__ZurichStopBypassAimbot then pcall(_G.__ZurichStopBypassAimbot) end
             _G.__checkAndAutoDrop(function()
             local char = Player.Character
             if char then _cypherStartFollowing(char) end
             end)
+            end
             else
-            _cypherStop()
+            _G.__ZurichBypassAimbotFromAimbot = false
+            if _G.__ZurichStopBypassAimbot then pcall(_G.__ZurichStopBypassAimbot) end
+            pcall(function() if _cypherStop then _cypherStop() end end)
             if _G.__refreshSpeedBoost then _G.__refreshSpeedBoost() end
+            end
+            end
+            end
+
+
+            FeaturePostToggle["Anti Die"] = function(active)
+            if active then
+            if _G.__zurichAntiDieSource then
+            _G.__zurichAntiDieSource("manual", true)
+            else
+            _G.__zurichAntiDieSet(true)
+            end
+            -- Supreme-style hard flags on current humanoid
+            local char = Player.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if hum then
+            pcall(function()
+            hum.BreakJointsOnDeath = false
+            hum:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+            hum:SetStateEnabled(Enum.HumanoidStateType.Dying, false)
+            if hum.Health <= 0 then hum.Health = hum.MaxHealth end
+            end)
+            end
+            else
+            if _G.__zurichAntiDieSource then
+            _G.__zurichAntiDieSource("manual", false)
+            else
+            _G.__zurichAntiDieSet(false)
             end
             end
             end
@@ -8694,7 +8744,7 @@
 
             local sideTabLayout = Instance.new("UIListLayout", sideTabContainer)
             sideTabLayout.FillDirection = Enum.FillDirection.Horizontal
-            sideTabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+            sideTabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
             sideTabLayout.VerticalAlignment = Enum.VerticalAlignment.Center
             sideTabLayout.Padding = UDim.new(0, tabButtonGap)
 
@@ -9335,6 +9385,7 @@
             local combatSection = makeUraniumSection(tabPages.Combat, "COMBAT")
             _G.__ZurichMakeSubheader(combatSection, "DEFENSA")
             makeToggleNoKeybind(combatSection, "Body Lock", "Body Lock")
+            makeToggleNoKeybind(combatSection, "Anti Die", "Anti Die")
             makeToggleNoKeybind(combatSection, "Anti Ragdoll", "Anti Ragdoll")
             makeToggleNoKeybind(combatSection, "Ragdoll Counter", "Ragdoll Counter")
             makeToggleNoKeybind(combatSection, "Medusa Counter", "Medusa Counter")
@@ -9363,8 +9414,9 @@
             tpModeFrame.Size = UDim2.new(1, 0, 0, 34)
             tpModeFrame.Position = UDim2.new(0, 0, 0, 0)
             tpModeFrame.BackgroundTransparency = 1
-            makeModeSelector(tpModeFrame, {"V1", "V2", "V3", "Bypass", "Perso"}, autoBatMode, function(mode)
+            makeModeSelector(tpModeFrame, {"V1", "V2", "V3", "Perso"}, autoBatMode, function(mode)
             autoBatMode = mode
+            if mode == "Bypass" then mode = "V1" end -- legacy
             if _G.__setAutoBatMode then _G.__setAutoBatMode(mode) end
             refreshAutoBatModePanels()
             saveConfig()
@@ -9606,9 +9658,24 @@
             end -- Lagger Aimbot UI disabled
 
             makeToggle(combatSection, "Aimbot", "Aimbot", function(ext)
+            local modeFrame = Instance.new("Frame", ext)
+            modeFrame.Size = UDim2.new(1, -8, 0, 34)
+            modeFrame.Position = UDim2.new(0, 4, 0, 2)
+            modeFrame.BackgroundTransparency = 1
+            makeModeSelector(modeFrame, {"Normal", "Bypass"}, _G.__ZurichAimbotMode or "Normal", function(mode)
+            _G.__ZurichAimbotMode = mode
+            if toggleStates["Aimbot"] then
+            -- re-apply via FeaturePostToggle so correct engine starts
+            if FeaturePostToggle["Aimbot"] then
+            pcall(FeaturePostToggle["Aimbot"], false)
+            pcall(FeaturePostToggle["Aimbot"], true)
+            end
+            end
+            saveConfig()
+            end)
             local sliderContainer = Instance.new("Frame", ext)
             sliderContainer.Size = UDim2.new(1, -16, 0, 72)
-            sliderContainer.Position = UDim2.new(0, 8, 0, 8)
+            sliderContainer.Position = UDim2.new(0, 8, 0, 38)
             sliderContainer.BackgroundTransparency = 1
 
             local card = Instance.new("Frame", sliderContainer)
@@ -9728,7 +9795,7 @@
             end)
 
             updateValue(speedValues[valueKey])
-            return 80
+            return 110
             end)
 
             -- FARMING / AUTO (integrated into Combat)
@@ -15086,7 +15153,9 @@
             end
             local function bpTick(dt)
             if not _bp.enabled then return end
-            if not abatState.autoBatToggled or abatState.batMode ~= "Bypass" then return end
+            local fromAimbot = _G.__ZurichBypassAimbotFromAimbot == true and toggleStates["Aimbot"] == true
+            local fromTpBat = abatState.autoBatToggled and abatState.batMode == "Bypass"
+            if not fromAimbot and not fromTpBat then return end
             local char = Player.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
             local hum = char and char:FindFirstChildOfClass("Humanoid")
@@ -15138,7 +15207,9 @@
             _bp.conn = RunService.RenderStepped:Connect(function(dt) bpTick(dt) end)
             _bp.safetyConn = RunService.Heartbeat:Connect(function()
             if not _bp.enabled then return end
-            if not abatState.autoBatToggled or abatState.batMode ~= "Bypass" then return end
+            local fromAimbot = _G.__ZurichBypassAimbotFromAimbot == true and toggleStates["Aimbot"] == true
+            local fromTpBat = abatState.autoBatToggled and abatState.batMode == "Bypass"
+            if not fromAimbot and not fromTpBat then return end
             local root = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
             if root and not root:FindFirstChild(_bp.moverName) then
             bpEnsureMover(root, BYPASS_AIMBOT_SPEED)
