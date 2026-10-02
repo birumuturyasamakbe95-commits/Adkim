@@ -5834,8 +5834,9 @@
 
             local agFps = 60; local agFrameCount = 0; local agLastTick = 0; local agStatsConn = nil
             local function autoGrabBaseSize()
-            if _G.__ZurichAutoGrabGuiStyle == "V2" then return 150, 150 end
-            return 150, 150
+            -- Supreme-style horizontal bar
+            if _G.__ZurichAutoGrabGuiStyle == "V2" then return 320, 52 end
+            return 320, 52
             end
             _G.__ZurichAutoGrabBaseSize = autoGrabBaseSize
             local function createProgressGui()
@@ -5884,38 +5885,58 @@
             _G.__ZurichRegisterThemeRoot(pillFrame)
             pillFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
             pillFrame.BorderSizePixel = 0
-            Instance.new("UICorner", pillFrame).CornerRadius = UDim.new(0, 14)
+            Instance.new("UICorner", pillFrame).CornerRadius = UDim.new(0, 12)
             local pillStroke = Instance.new("UIStroke", pillFrame)
             pillStroke.Color = Color3.fromRGB(220, 30, 40)
             pillStroke.Thickness = 1.5
             pillStroke.Transparency = 0.22
 
+            -- Background image (same asset as Anti Bat)
+            local pillBg = Instance.new("ImageLabel", pillFrame)
+            pillBg.Name = "AutoGrabBg"
+            pillBg.Size = UDim2.new(1, 0, 1, 0)
+            pillBg.BackgroundTransparency = 1
+            pillBg.Image = "rbxthumb://type=Asset&id=92435291918075&w=768&h=432"
+            pillBg.ImageTransparency = 0.35
+            pillBg.ScaleType = Enum.ScaleType.Crop
+            pillBg.ZIndex = 1
+            Instance.new("UICorner", pillBg).CornerRadius = UDim.new(0, 12)
+            local pillDim = Instance.new("Frame", pillFrame)
+            pillDim.Name = "AutoGrabDim"
+            pillDim.Size = UDim2.new(1, 0, 1, 0)
+            pillDim.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            pillDim.BackgroundTransparency = 0.35
+            pillDim.BorderSizePixel = 0
+            pillDim.ZIndex = 2
+            Instance.new("UICorner", pillDim).CornerRadius = UDim.new(0, 12)
+
+            -- Scale controls inside GUI (horizontal bar edges)
             local scaleMinus = Instance.new("TextButton", pillFrame)
             scaleMinus.Name = "ScaleMinus"
-            scaleMinus.Size = UDim2.new(0, 28, 0, 28)
-            scaleMinus.Position = UDim2.new(0, 6, 1, -34)
-            scaleMinus.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+            scaleMinus.Size = UDim2.new(0, 26, 0, 26)
+            scaleMinus.Position = UDim2.new(0, 4, 0.5, -13)
+            scaleMinus.BackgroundColor3 = Color3.fromRGB(20, 20, 26)
             scaleMinus.BorderSizePixel = 0
             scaleMinus.Text = "-"
             scaleMinus.TextColor3 = Color3.fromRGB(255, 255, 255)
             scaleMinus.Font = Enum.Font.GothamBold
-            scaleMinus.TextSize = 16
+            scaleMinus.TextSize = 15
             scaleMinus.ZIndex = 20
             scaleMinus.AutoButtonColor = false
-            Instance.new("UICorner", scaleMinus).CornerRadius = UDim.new(0, 8)
+            Instance.new("UICorner", scaleMinus).CornerRadius = UDim.new(0, 7)
             local scalePlus = Instance.new("TextButton", pillFrame)
             scalePlus.Name = "ScalePlus"
-            scalePlus.Size = UDim2.new(0, 28, 0, 28)
-            scalePlus.Position = UDim2.new(1, -34, 1, -34)
+            scalePlus.Size = UDim2.new(0, 26, 0, 26)
+            scalePlus.Position = UDim2.new(1, -30, 0.5, -13)
             scalePlus.BackgroundColor3 = Color3.fromRGB(220, 30, 40)
             scalePlus.BorderSizePixel = 0
             scalePlus.Text = "+"
             scalePlus.TextColor3 = Color3.fromRGB(255, 255, 255)
             scalePlus.Font = Enum.Font.GothamBold
-            scalePlus.TextSize = 16
+            scalePlus.TextSize = 15
             scalePlus.ZIndex = 20
             scalePlus.AutoButtonColor = false
-            Instance.new("UICorner", scalePlus).CornerRadius = UDim.new(0, 8)
+            Instance.new("UICorner", scalePlus).CornerRadius = UDim.new(0, 7)
             local function changeAgScale(delta)
             speedValues.AutoGrabGuiScale = math.clamp((tonumber(speedValues.AutoGrabGuiScale) or 0.55) + delta, 0.40, 1.20)
             if _G.__ZurichApplyAutoGrabScale then _G.__ZurichApplyAutoGrabScale(true) end
@@ -5926,10 +5947,10 @@
 
             local content = Instance.new("Frame", pillFrame)
             content.Name = "Content"
-            content.Size = UDim2.new(1, -12, 1, -12)
-            content.Position = UDim2.new(0, 6, 0, 6)
+            content.Size = UDim2.new(1, -64, 1, -8)
+            content.Position = UDim2.new(0, 32, 0, 4)
             content.BackgroundTransparency = 1
-            content.ZIndex = 2
+            content.ZIndex = 5
 
             local discordGrabLbl = Instance.new("TextLabel", content)
             discordGrabLbl.Name = "DiscordLabel"
@@ -12504,14 +12525,15 @@
             label.BackgroundTransparency = 1
             label.Text = feat.label
             if feat.name == "Speed Mode" and selectedMode == "Lagger" then label.Text = "LAGGER\nSPEED" end
-            label.TextColor3 = isMobile and Color3.fromRGB(220, 30, 40) or Color3.fromRGB(180, 180, 180)
+            label.TextColor3 = isMobile and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(255, 255, 255)
             label.Font = Enum.Font.GothamBlack
             label.TextSize = 8
             label.TextWrapped = true
             if isMobile then
             label.Size = UDim2.new(1, -6, 1, -6)
             label.Position = UDim2.new(0, 3, 0, 3)
-            label.TextSize = 11
+            label.TextSize = 12
+            label.TextColor3 = Color3.fromRGB(255, 255, 255)
             end
 
             if feat.name == "LockPos" then
@@ -12533,8 +12555,8 @@
             local function updateBtnVisual()
             if feat.name == "LockPos" then
             if isMobile then
-            TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = mobileUiLocked and Color3.fromRGB(220, 30, 40) or Color3.fromRGB(0, 0, 0)}):Play()
-            TweenService:Create(label, TweenInfo.new(0.15), {TextColor3 = mobileUiLocked and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(220, 30, 40)}):Play()
+            TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = mobileUiLocked and Color3.fromRGB(220, 30, 40) or Color3.fromRGB(0, 0, 0)}):Play()
+            TweenService:Create(label, TweenInfo.new(0.12), {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
             end
             return
             end
@@ -12542,9 +12564,12 @@
             if feat.name == "Auto Bat" and _G.__getAutoBat then active = _G.__getAutoBat() end
             if feat.name == "Carry Speed" then active = speedToggled == true or toggleStates["Carry Speed"] == true end
             if isMobile then
-            TweenService:Create(btn, TweenInfo.new(0.15), {
+            -- active: red bg + white text | inactive: black bg + white text (readable)
+            TweenService:Create(btn, TweenInfo.new(0.12), {
             BackgroundColor3 = active and Color3.fromRGB(220, 30, 40) or Color3.fromRGB(0, 0, 0),
-            TextColor3 = active and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(220, 30, 40),
+            }):Play()
+            TweenService:Create(label, TweenInfo.new(0.12), {
+            TextColor3 = Color3.fromRGB(255, 255, 255),
             }):Play()
             else
             stroke.Color = Color3.fromRGB(180, 180, 180)
