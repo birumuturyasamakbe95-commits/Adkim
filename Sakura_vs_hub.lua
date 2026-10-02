@@ -530,7 +530,7 @@
             BypassDepth = 296,
             GuiScale = 1.0,
             MobileButtonScale = 1.0,
-            AutoGrabGuiScale = 0.55,
+            AutoGrabGuiScale = 0.85,
             FOV = 70,
             StretchIntensity = 0.75,
             ConfigLaggerTableIncrease = 290,
@@ -1005,9 +1005,21 @@
             if setter then pcall(setter, false) end
             if FeaturePostToggle[name] then pcall(FeaturePostToggle[name], false) end
             end
+            -- clear mobile shortcut sticky state
+            if mobileShortcutStates then
+            if name == "AutoBat" then mobileShortcutStates["Auto Bat"] = false
+            else mobileShortcutStates[name] = false end
+            end
             end
             end
             saveConfig()
+            -- refresh mobile button colors so nothing stays stuck red
+            task.defer(function()
+            local visuals = _G.__btnVisuals
+            if visuals then
+            for _, v in pairs(visuals) do pcall(v) end
+            end
+            end)
             end
             _G.__deactivateBatExclusive = deactivateBatExclusive
 
@@ -5830,8 +5842,8 @@
             local agFps = 60; local agFrameCount = 0; local agLastTick = 0; local agStatsConn = nil
             local function autoGrabBaseSize()
             -- Supreme-style long horizontal steal bar
-            if _G.__ZurichAutoGrabGuiStyle == "V2" then return 400, 48 end
-            return 400, 48
+            if _G.__ZurichAutoGrabGuiStyle == "V2" then return 420, 44 end
+            return 420, 44
             end
             _G.__ZurichAutoGrabBaseSize = autoGrabBaseSize
             local function createProgressGui()
@@ -5892,7 +5904,7 @@
             pillBg.Size = UDim2.new(1, 0, 1, 0)
             pillBg.BackgroundTransparency = 1
             pillBg.Image = "rbxthumb://type=Asset&id=92435291918075&w=768&h=432"
-            pillBg.ImageTransparency = 0.35
+            pillBg.ImageTransparency = 0.25
             pillBg.ScaleType = Enum.ScaleType.Crop
             pillBg.ZIndex = 1
             Instance.new("UICorner", pillBg).CornerRadius = UDim.new(0, 12)
@@ -5900,7 +5912,7 @@
             pillDim.Name = "AutoGrabDim"
             pillDim.Size = UDim2.new(1, 0, 1, 0)
             pillDim.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-            pillDim.BackgroundTransparency = 0.55
+            pillDim.BackgroundTransparency = 0.65
             pillDim.BorderSizePixel = 0
             pillDim.ZIndex = 2
             Instance.new("UICorner", pillDim).CornerRadius = UDim.new(0, 12)
@@ -5973,8 +5985,8 @@
             Instance.new("UICorner", leftSection).CornerRadius = UDim.new(1, 0)
             local progressTrack = Instance.new("Frame", leftSection)
             progressTrack.Name = "ProgressTrack"
-            progressTrack.Position = UDim2.new(0, 4, 1, -10)
-            progressTrack.Size = UDim2.new(1, -8, 0, 6)
+            progressTrack.Position = UDim2.new(0, 2, 1, -9)
+            progressTrack.Size = UDim2.new(1, -4, 0, 7)
             progressTrack.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
             progressTrack.BorderSizePixel = 0
             progressTrack.ClipsDescendants = true
@@ -12367,6 +12379,7 @@
             local mobileButtons = {}
             local buttonCorners = {}
             local btnVisuals = {}
+            _G.__btnVisuals = btnVisuals
             local updateMobileButtonsVisibility
             mobileGui.Enabled = toggleStates["Show Buttons"] == true
 
@@ -12438,7 +12451,8 @@
             if featureName == "Auto Bat" then
             local isActive = _G.__getAutoBat and _G.__getAutoBat() or false
             if _G.__setAutoBat then _G.__setAutoBat(not isActive) end
-            if btnVisuals[featureName] then btnVisuals[featureName]() end
+            -- refresh every mobile button so Aimbot etc. don't stay stuck red
+            for _, v in pairs(btnVisuals) do pcall(v) end
             return
             end
 
@@ -12466,6 +12480,8 @@
             if FeaturePostToggle[featureName] then FeaturePostToggle[featureName](active) end
             end
             if toggleVisualUpdaters[featureName] then toggleVisualUpdaters[featureName]() end
+            -- keep mobile button colors in sync (Aimbot / TP Bat exclusivity)
+            for _, v in pairs(btnVisuals) do pcall(v) end
             end
 
             for i, feat in ipairs(mobileButtonConfigs) do
@@ -12514,7 +12530,7 @@
             label.BackgroundTransparency = 1
             label.Text = feat.label
             if feat.name == "Speed Mode" and selectedMode == "Lagger" then label.Text = "LAGGER\nSPEED" end
-            label.TextColor3 = isMobile and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(255, 255, 255)
+            label.TextColor3 = isMobile and Color3.fromRGB(220, 30, 40) or Color3.fromRGB(220, 30, 40)
             label.Font = Enum.Font.GothamBlack
             label.TextSize = 8
             label.TextWrapped = true
@@ -12522,7 +12538,7 @@
             label.Size = UDim2.new(1, -6, 1, -6)
             label.Position = UDim2.new(0, 3, 0, 3)
             label.TextSize = 12
-            label.TextColor3 = Color3.fromRGB(255, 255, 255)
+            label.TextColor3 = Color3.fromRGB(220, 30, 40)
             end
 
             if feat.name == "LockPos" then
@@ -12553,12 +12569,12 @@
             if feat.name == "Auto Bat" and _G.__getAutoBat then active = _G.__getAutoBat() end
             if feat.name == "Carry Speed" then active = speedToggled == true or toggleStates["Carry Speed"] == true end
             if isMobile then
-            -- active: red bg + white text | inactive: black bg + white text (readable)
+            -- active: red bg + white text | inactive: black bg + red text
             TweenService:Create(btn, TweenInfo.new(0.12), {
             BackgroundColor3 = active and Color3.fromRGB(220, 30, 40) or Color3.fromRGB(0, 0, 0),
             }):Play()
             TweenService:Create(label, TweenInfo.new(0.12), {
-            TextColor3 = Color3.fromRGB(255, 255, 255),
+            TextColor3 = active and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(220, 30, 40),
             }):Play()
             else
             stroke.Color = Color3.fromRGB(180, 180, 180)
@@ -15317,8 +15333,11 @@
             if p ~= Player and p.Character then
             local tr = p.Character:FindFirstChild("HumanoidRootPart")
             local validTarget = tr ~= nil
-            if validTarget and (abatState.batMode == "V2" or abatState.batMode == "Perso") then
+            if validTarget and (abatState.batMode == "V2" or abatState.batMode == "Perso" or abatState.batMode == "V1") then
             local hum = p.Character:FindFirstChildOfClass("Humanoid")
+            if abatState.batMode == "V1" then
+            validTarget = hum ~= nil and hum.Health > 0
+            else
             local targetY = tr.Position.Y
             local targetX = tr.Position.X
             local targetZ = tr.Position.Z
@@ -15326,6 +15345,7 @@
             and targetY >= -30 and targetY <= 75
             and abatV2XInBounds(targetX)
             and abatV2ZInBounds(targetZ)
+            end
             end
             if validTarget then
             local d = (abatHRP.Position - tr.Position).Magnitude
