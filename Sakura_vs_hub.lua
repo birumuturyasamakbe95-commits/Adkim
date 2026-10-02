@@ -7513,14 +7513,7 @@
             if markedDirection.Magnitude > 0.1 then updateRotationAngular(markedDirection, rootPart) end
             if markedDirection.Magnitude > CFG.MIN_FOLLOW_DISTANCE then
             local markedSpeed = tonumber(speedValues.ZurichAimbotApproachSpeed) or CFG.FOLLOW_SPEED
-            markedSpeed = math.clamp(markedSpeed, 1, 120)
-            if markedDirection.Magnitude > 14 then
-            pcall(function()
-            local snap = markedPosition - markedDirection.Unit * 2.5
-            rootPart.CFrame = CFrame.new(snap, markedPosition)
-            end)
-            end
-            rootPart.AssemblyLinearVelocity = markedDirection.Unit * markedSpeed
+            rootPart.AssemblyLinearVelocity = markedDirection.Unit * math.clamp(markedSpeed, 1, 120)
             else
             rootPart.AssemblyLinearVelocity = Vector3.zero
             end
@@ -7697,21 +7690,11 @@
             end
             end
             local direction = interceptPoint - myPos
-            local dist = direction.Magnitude
-            if dist > CFG.MIN_FOLLOW_DISTANCE then
+            if direction.Magnitude > CFG.MIN_FOLLOW_DISTANCE then
             local dirUnit = direction.Unit
             local currentSpeed = tonumber(speedValues.ZurichAimbotApproachSpeed) or CFG.FOLLOW_SPEED
             currentSpeed = math.clamp(currentSpeed, 1, 120)
-            -- Auto TP when far (Bat x TP)
-            if dist > 14 then
-            pcall(function()
-            local snap = interceptPoint - dirUnit * 2.5
-            rootPart.CFrame = CFrame.new(snap, interceptPoint)
             rootPart.AssemblyLinearVelocity = dirUnit * currentSpeed
-            end)
-            else
-            rootPart.AssemblyLinearVelocity = dirUnit * currentSpeed
-            end
             else
             rootPart.AssemblyLinearVelocity = Vector3.new(0, rootPart.AssemblyLinearVelocity.Y * 0.5, 0)
             end
@@ -8777,14 +8760,6 @@
             sideTabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
             sideTabLayout.VerticalAlignment = Enum.VerticalAlignment.Center
             sideTabLayout.Padding = UDim.new(0, tabButtonGap)
-            sideTabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            -- force right pack: flexible spacer on the left
-            local tabLeftSpacer = Instance.new("Frame", sideTabContainer)
-            tabLeftSpacer.Name = "TabLeftSpacer"
-            tabLeftSpacer.BackgroundTransparency = 1
-            tabLeftSpacer.BorderSizePixel = 0
-            tabLeftSpacer.Size = UDim2.new(1, -(4 * (isMobile and 64 or 72) + 3 * tabButtonGap), 1, 0)
-            tabLeftSpacer.LayoutOrder = 0
 
             -- Nombres exactos de las secciones
             local tabDisplayNames = {
@@ -8803,11 +8778,10 @@
             Animations = {title="Settings", desc="Animation presets and character motion", count="04 / 04"},
             }
 
-            for ti, name in ipairs(tabNames) do
+            for _, name in ipairs(tabNames) do
             local displayName = tabDisplayNames[name] or name
             local button = Instance.new("TextButton", sideTabContainer)
             button.Size = UDim2.new(0, isMobile and 64 or 72, 1, 0)
-            button.LayoutOrder = ti
             button.BackgroundColor3 = Color3.fromRGB(3, 16, 38)
             button.BackgroundTransparency = 1
             button.BorderSizePixel = 0
@@ -11696,25 +11670,21 @@
             sideTabContainer.Position = UDim2.new(0,22,0,78)
             ContentArea.Size = UDim2.new(1,-28,1,-124)
             ContentArea.Position = UDim2.new(0,14,0,114)
-            if sideTabLayout then
-            sideTabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-            sideTabLayout.FillDirection = Enum.FillDirection.Horizontal
-            end
             for name, button in pairs(tabButtons) do
             button.Text = gui2TabNames[name] or name
-            button.Size = UDim2.new(0, isMobile and 64 or 72, 1, 0)
+            button.Size = UDim2.new(0.25,-5,1,0)
             local tabAccent = button:FindFirstChild("TabAccent")
             if not tabAccent then
             tabAccent = Instance.new("Frame",button)
             tabAccent.Name = "TabAccent"
-            tabAccent.Size = UDim2.new(1,-12,0,2)
-            tabAccent.Position = UDim2.new(0,6,1,-3)
+            tabAccent.Size = UDim2.new(1,-30,0,2)
+            tabAccent.Position = UDim2.new(0,15,1,-3)
             tabAccent.BorderSizePixel = 0
             tabAccent.ZIndex = button.ZIndex+1
             Instance.new("UICorner",tabAccent).CornerRadius = UDim.new(1,0)
             end
-            tabAccent.Size = UDim2.new(1,-12,0,2)
-            tabAccent.Position = UDim2.new(0,6,1,-3)
+            tabAccent.Size = UDim2.new(1,-30,0,2)
+            tabAccent.Position = UDim2.new(0,15,1,-3)
             tabAccent.Visible = true
             end
             applyStyle2Cards()
@@ -11722,14 +11692,6 @@
 
             local function applyGuiStyle(style)
             _G.__ZurichStyle2UI.Mode = style == "GUI 2" and "GUI 2" or "GUI 1"
-            if sideTabLayout then
-            sideTabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-            end
-            if tabButtons then
-            for _, button in pairs(tabButtons) do
-            button.Size = UDim2.new(0, isMobile and 64 or 72, 1, 0)
-            end
-            end
             local oldPosition = Panel.Position
             if _G.__ZurichStyle2UI.Mode == "GUI 2" then
             applyGui2RootLayout()
