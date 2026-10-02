@@ -235,17 +235,8 @@
             end
 
             playIntroMusic = function(index)
+            -- intro music disabled
             stopIntroMusic()
-            local assetId = getExternalAudio(index)
-            if assetId and introGui then
-            introMusicSound = Instance.new("Sound")
-            introMusicSound.Name = "IntroMusic"
-            introMusicSound.SoundId = assetId
-            introMusicSound.Volume = 1
-            introMusicSound.Looped = true
-            introMusicSound.Parent = introGui
-            introMusicSound:Play()
-            end
             end
 
             local function createIntroGui()
@@ -845,7 +836,7 @@
             ["Lagger Aimbot"] = false, ["Autoplay"] = false, ["Drop"] = false,
             ["auto steal"] = false, ["ESP Players"] = false, ["ESP Tracers"] = false, ["ESP Skeleton"] = false, ["Show FPS"] = false,
             ["FPS Boost"] = false, ["Taunt"] = false, ["Optimizer"] = false,
-            ["Skin Changer"] = false, ["Medusa Changer"] = false, ["Base Skin Changer"] = false,
+            ["Skin Changer"] = false, ["Medusa Changer"] = false, ["Base Skin Changer"] = false, -- disabled
             ["Katana Cycler"] = false, ["Circle Buttons"] = false,
             ["Sky"] = false, ["Lagger"] = false, ["Speed Boost"] = false,
             ["Toggle UI"] = true,
@@ -1068,7 +1059,7 @@
             elseif k == "autoBatModeSchema" then
             _G.__ZurichAutoBatModeSchema = tonumber(v) or 1
             elseif k == "autoBatMode" then
-            if v == "V1" or v == "V2" or v == "V3" or v == "Config" or v == "Perso" then
+            if v == "V1" or v == "V2" or v == "V3" or v == "Config" or v == "Perso" or v == "Bypass" then
             if v == "Config" or (v == "V3" and (_G.__ZurichAutoBatModeSchema or 1) < 2) then
             autoBatMode = "Perso"
             else
@@ -1205,6 +1196,10 @@
             toggleStates["Aimbot"] = false
             toggleStates["Lagger Aimbot"] = false
             toggleStates["Autoplay"] = false
+            toggleStates["Skin Changer"] = false
+            toggleStates["Medusa Changer"] = false
+            toggleStates["Base Skin Changer"] = false
+            toggleStates["Sky"] = false
             toggleStates["Lagger"] = false
             if isMobile then toggleStates["Show Buttons"] = true end
 
@@ -4332,17 +4327,17 @@
             -- ==================== TP DOWN ====================
             do
             local function executeTPDown()
+            -- Supreme-style TP Down
+            pcall(function()
             local char = Player.Character
             if not char then return end
-            local hrp = char:FindFirstChild("HumanoidRootPart")
-            if not hrp then return end
-            local hum = char:FindFirstChildOfClass("Humanoid")
-            if not hum then return end
-
-            local _, yaw = hrp.CFrame:ToEulerAnglesYXZ()
-            hrp.CFrame = CFrame.new(hrp.Position.X, -7, hrp.Position.Z)
-            * CFrame.Angles(0, yaw, 0)
-            hrp.AssemblyLinearVelocity = Vector3.zero
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if not root then return end
+            local _, yaw = root.CFrame:ToEulerAnglesYXZ()
+            root.CFrame = CFrame.new(root.Position.X, -7, root.Position.Z) * CFrame.Angles(0, yaw, 0)
+            root.AssemblyLinearVelocity = Vector3.zero
+            pcall(function() root.Velocity = Vector3.zero end)
+            end)
             end
 
             _G["ExecuteTPDown"] = executeTPDown
@@ -5834,9 +5829,9 @@
 
             local agFps = 60; local agFrameCount = 0; local agLastTick = 0; local agStatsConn = nil
             local function autoGrabBaseSize()
-            -- Supreme-style horizontal bar
-            if _G.__ZurichAutoGrabGuiStyle == "V2" then return 320, 52 end
-            return 320, 52
+            -- Supreme-style long horizontal steal bar
+            if _G.__ZurichAutoGrabGuiStyle == "V2" then return 400, 48 end
+            return 400, 48
             end
             _G.__ZurichAutoGrabBaseSize = autoGrabBaseSize
             local function createProgressGui()
@@ -5905,7 +5900,7 @@
             pillDim.Name = "AutoGrabDim"
             pillDim.Size = UDim2.new(1, 0, 1, 0)
             pillDim.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-            pillDim.BackgroundTransparency = 0.35
+            pillDim.BackgroundTransparency = 0.55
             pillDim.BorderSizePixel = 0
             pillDim.ZIndex = 2
             Instance.new("UICorner", pillDim).CornerRadius = UDim.new(0, 12)
@@ -5969,37 +5964,30 @@
 
             local leftSection = Instance.new("Frame", content)
             leftSection.Name = "LeftSection"
-            leftSection.Position = UDim2.new(0, 74, 0, 0)
-            leftSection.Size = UDim2.new(0, 120, 1, 0)
+            leftSection.Position = UDim2.new(0, 70, 0, 0)
+            leftSection.Size = UDim2.new(1, -150, 1, 0)
             leftSection.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
             leftSection.BackgroundTransparency = 1
             leftSection.BorderSizePixel = 0
             leftSection.ClipsDescendants = false
             Instance.new("UICorner", leftSection).CornerRadius = UDim.new(1, 0)
-            local leftOverlay = Instance.new("Frame", leftSection)
-            leftOverlay.Size = UDim2.new(1, 0, 1, 0)
-            leftOverlay.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            leftOverlay.BackgroundTransparency = 1
-            leftOverlay.BorderSizePixel = 0
-            Instance.new("UICorner", leftOverlay).CornerRadius = UDim.new(1, 0)
-
             local progressTrack = Instance.new("Frame", leftSection)
             progressTrack.Name = "ProgressTrack"
-            progressTrack.Position = UDim2.new(0, 14, 1, -9)
-            progressTrack.Size = UDim2.new(1, -28, 0, 4)
-            progressTrack.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
+            progressTrack.Position = UDim2.new(0, 4, 1, -10)
+            progressTrack.Size = UDim2.new(1, -8, 0, 6)
+            progressTrack.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
             progressTrack.BorderSizePixel = 0
             progressTrack.ClipsDescendants = true
             Instance.new("UICorner", progressTrack).CornerRadius = UDim.new(1, 0)
 
             progressBar = Instance.new("Frame", progressTrack)
             progressBar.Name = "ProgressFill"; progressBar.Size = UDim2.new(0, 0, 1, 0)
-            progressBar.BackgroundColor3 = Color3.fromRGB(220, 30, 40); progressBar.BorderSizePixel = 0
+            progressBar.BackgroundColor3 = Color3.fromRGB(50, 140, 255); progressBar.BorderSizePixel = 0
             Instance.new("UICorner", progressBar).CornerRadius = UDim.new(1, 0)
             local fillGradient = Instance.new("UIGradient", progressBar)
             fillGradient.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(120, 120, 120)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 180, 180)),
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 110, 220)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(80, 180, 255)),
             })
             fillGradient.Rotation = 0
             local leftStroke = Instance.new("UIStroke", leftSection)
@@ -9363,7 +9351,7 @@
             tpModeFrame.Size = UDim2.new(1, 0, 0, 34)
             tpModeFrame.Position = UDim2.new(0, 0, 0, 0)
             tpModeFrame.BackgroundTransparency = 1
-            makeModeSelector(tpModeFrame, {"V1", "V2", "V3", "Perso"}, autoBatMode, function(mode)
+            makeModeSelector(tpModeFrame, {"V1", "V2", "V3", "Bypass", "Perso"}, autoBatMode, function(mode)
             autoBatMode = mode
             if _G.__setAutoBatMode then _G.__setAutoBatMode(mode) end
             refreshAutoBatModePanels()
@@ -10385,8 +10373,11 @@
             connectBtn(selector.next, function() stepSky(1) end)
             _G.__updateSkyBtnLabel = function() cycleBtn.Text = _G.__skyCurrentName() or "Blue" end
             task.defer(_G.__updateSkyBtnLabel)
-            updateVisual(); card.Parent=container; container.Parent=visualSection
+            updateVisual()
+            -- Sky UI removed (user request)
+            -- updateVisual(); card.Parent=container; container.Parent=visualSection
             toggleVisualUpdaters["Sky"] = updateVisual
+            toggleStates["Sky"] = false
             end
 
             -- Intro toggle
@@ -10612,9 +10603,7 @@
             end
 
             _G.__ZurichMakeSubheader(visualSection, "APARIENCIA")
-            makeToggleNoKeybind(visualSection, "Skin Changer", "Skin Changer")
-            makeToggleNoKeybind(visualSection, "Medusa Changer", "Medusa Changer")
-            makeToggleNoKeybind(visualSection, "Base Skin Changer", "Base Skin Changer")
+            -- Skin Changer / Medusa Changer / Base Skin Changer removed
 
             if isMobile then
             _G.__ZurichMakeSubheader(visualSection, "CONTROLES MOVILES")
@@ -14983,6 +14972,167 @@
             end
             end
 
+
+            -- ===== Supreme Spectrum Bypass Aimbot (ported) =====
+            do
+            local BYPASS_AIMBOT_SPEED = 60
+            local _bp = {
+            enabled = false,
+            conn = nil,
+            safetyConn = nil,
+            swingCD = false,
+            attachmentName = "SakuraBypassMoveAtt",
+            moverName = "SakuraBypassMoveVel",
+            minForce = 1000000,
+            maxForce = 50000000,
+            }
+            local function bpClearMover(root)
+            if not root then return end
+            local lv = root:FindFirstChild(_bp.moverName)
+            local att = root:FindFirstChild(_bp.attachmentName)
+            if lv then pcall(function() lv:Destroy() end) end
+            if att then pcall(function() att:Destroy() end) end
+            end
+            local function bpEnsureMover(root, speed)
+            if not root then return nil end
+            local att = root:FindFirstChild(_bp.attachmentName)
+            if not att or not att:IsA("Attachment") then
+            if att then att:Destroy() end
+            att = Instance.new("Attachment")
+            att.Name = _bp.attachmentName
+            att.Parent = root
+            end
+            local lv = root:FindFirstChild(_bp.moverName)
+            if not lv or not lv:IsA("LinearVelocity") then
+            if lv then pcall(function() lv:Destroy() end) end
+            lv = Instance.new("LinearVelocity")
+            lv.Name = _bp.moverName
+            lv.Attachment0 = att
+            lv.RelativeTo = Enum.ActuatorRelativeTo.World
+            lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+            lv.ForceLimitsEnabled = true
+            lv.ForceLimitMode = Enum.ForceLimitMode.PerAxis
+            lv.VectorVelocity = Vector3.zero
+            lv.Parent = root
+            else
+            lv.Attachment0 = att
+            end
+            local force = math.clamp((root.AssemblyMass or 10) * math.max(speed * 220, 6000), _bp.minForce, _bp.maxForce)
+            lv.MaxAxesForce = Vector3.new(force, force, force)
+            lv.Enabled = true
+            return lv
+            end
+            local function bpGetClosest()
+            local char = Player.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return nil end
+            local best, bestD = nil, math.huge
+            for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= Player and plr.Character then
+            local tr = plr.Character:FindFirstChild("HumanoidRootPart")
+            local th = plr.Character:FindFirstChildOfClass("Humanoid")
+            if tr and th and th.Health > 0 then
+            local d = (tr.Position - hrp.Position).Magnitude
+            if d < bestD then bestD = d; best = tr end
+            end
+            end
+            end
+            return best
+            end
+            local function bpTrySwing()
+            if _bp.swingCD then return end
+            _bp.swingCD = true
+            pcall(function()
+            local char = Player.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            local bat = nil
+            if char then
+            for _, t in ipairs(char:GetChildren()) do
+            if t:IsA("Tool") and string.find(string.lower(t.Name), "bat", 1, true) then bat = t; break end
+            end
+            if not bat and Player:FindFirstChild("Backpack") then
+            for _, t in ipairs(Player.Backpack:GetChildren()) do
+            if t:IsA("Tool") and string.find(string.lower(t.Name), "bat", 1, true) then
+            bat = t
+            if hum then pcall(function() hum:EquipTool(t) end) end
+            break
+            end
+            end
+            end
+            end
+            if bat then
+            bat:Activate()
+            local ev = bat:FindFirstChildWhichIsA("RemoteEvent")
+            if ev then pcall(function() ev:FireServer() end) end
+            end
+            end)
+            task.delay(0.12, function() _bp.swingCD = false end)
+            end
+            local function bpTick(dt)
+            if not _bp.enabled then return end
+            if not abatState.autoBatToggled or abatState.batMode ~= "Bypass" then return end
+            local char = Player.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if not root or not hum or hum.Health <= 0 then return end
+            pcall(function() hum.AutoRotate = false end)
+            local target = bpGetClosest()
+            local speed = BYPASS_AIMBOT_SPEED
+            local lv = bpEnsureMover(root, speed)
+            if not lv then return end
+            if not target then
+            lv.VectorVelocity = Vector3.zero
+            return
+            end
+            local myPos = root.Position
+            local targetPos = target.Position + Vector3.new(0, 0.5, 0)
+            local to = targetPos - myPos
+            local dist = to.Magnitude
+            if dist < 0.1 then
+            lv.VectorVelocity = Vector3.zero
+            bpTrySwing()
+            return
+            end
+            local dir = to.Unit
+            local yVel = root.AssemblyLinearVelocity.Y
+            if hum.FloorMaterial ~= Enum.Material.Air then yVel = math.max(yVel, 8) end
+            yVel = math.clamp(yVel, -70, 110)
+            local desired = Vector3.new(dir.X * speed, yVel, dir.Z * speed)
+            local alpha = 1 - math.exp(-math.max(dt or 0.016, 0) * 26)
+            lv.VectorVelocity = lv.VectorVelocity:Lerp(desired, alpha)
+            pcall(function()
+            local cam = workspace.CurrentCamera
+            if cam then cam.CFrame = CFrame.new(cam.CFrame.Position, target.Position) end
+            end)
+            if dist <= 9 then bpTrySwing() end
+            end
+            local function stopBypassAimbot()
+            _bp.enabled = false
+            if _bp.conn then pcall(function() _bp.conn:Disconnect() end); _bp.conn = nil end
+            if _bp.safetyConn then pcall(function() _bp.safetyConn:Disconnect() end); _bp.safetyConn = nil end
+            local char = Player.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            bpClearMover(root)
+            if hum then pcall(function() hum.AutoRotate = true end) end
+            end
+            local function startBypassAimbot()
+            stopBypassAimbot()
+            _bp.enabled = true
+            _bp.conn = RunService.RenderStepped:Connect(function(dt) bpTick(dt) end)
+            _bp.safetyConn = RunService.Heartbeat:Connect(function()
+            if not _bp.enabled then return end
+            if not abatState.autoBatToggled or abatState.batMode ~= "Bypass" then return end
+            local root = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
+            if root and not root:FindFirstChild(_bp.moverName) then
+            bpEnsureMover(root, BYPASS_AIMBOT_SPEED)
+            end
+            end)
+            end
+            _G.__ZurichStartBypassAimbot = startBypassAimbot
+            _G.__ZurichStopBypassAimbot = stopBypassAimbot
+            end
+
             local function abatSetEnabled(on)
             local desired = on == true
             if abatState.batMode == "Perso" and desired == abatState.autoBatToggled then
@@ -14994,6 +15144,9 @@
             if not desired and abatState.batMode == "V3" then
             _G.__ZurichStopAutoBatV3()
             end
+            if not desired and abatState.batMode == "Bypass" then
+            if _G.__ZurichStopBypassAimbot then pcall(_G.__ZurichStopBypassAimbot) end
+            end
             if not desired and abatState.batMode == "Perso" then
             abatRestoreReplicationRoot()
             end
@@ -15004,6 +15157,9 @@
             end
             if desired and abatState.batMode == "V3" then
             _G.__ZurichStartAutoBatV3()
+            end
+            if desired and abatState.batMode == "Bypass" then
+            if _G.__ZurichStartBypassAimbot then pcall(_G.__ZurichStartBypassAimbot) end
             end
             abatResetV2Safety(true)
             abatSyncV2Mode()
@@ -15021,7 +15177,7 @@
             end
             _G.__setAutoBatMode = function(mode)
             if mode == "Config" then mode = "Perso" end
-            if mode ~= "V1" and mode ~= "V2" and mode ~= "V3" and mode ~= "Perso" then return end
+            if mode ~= "V1" and mode ~= "V2" and mode ~= "V3" and mode ~= "Perso" and mode ~= "Bypass" then return end
             local previousMode = abatState.batMode
             if previousMode == "V3" and mode ~= "V3" then
             _G.__ZurichStopAutoBatV3()
@@ -15029,10 +15185,16 @@
             if previousMode == "Perso" and mode ~= "Perso" then
             abatRestoreReplicationRoot()
             end
+            if previousMode == "Bypass" and mode ~= "Bypass" then
+            if _G.__ZurichStopBypassAimbot then pcall(_G.__ZurichStopBypassAimbot) end
+            end
             autoBatMode = mode
             abatState.batMode = mode
             if abatState.autoBatToggled and mode == "V3" then
             _G.__ZurichStartAutoBatV3()
+            end
+            if abatState.autoBatToggled and mode == "Bypass" then
+            if _G.__ZurichStartBypassAimbot then pcall(_G.__ZurichStartBypassAimbot) end
             end
             abatResetV2Safety()
             abatSyncV2Mode()
@@ -15359,14 +15521,94 @@
             RunService.Heartbeat:Connect(function()
             if not (abatH and abatHRP and abatH.Parent and abatHRP.Parent) then return end
             if abatState.batMode == "V3" then return end
+            if abatState.batMode == "Bypass" then return end -- Bypass runs on its own RenderStepped
             local target = nil
-            if abatState.batMode == "V2" or abatState.batMode == "Perso" or abatState.autoBatToggled then
+            if abatState.batMode == "V2" or abatState.batMode == "Perso" or abatState.batMode == "V1" or abatState.autoBatToggled then
             target = abatGetClosestPlayer()
             end
             if abatState.batMode == "V2" or abatState.batMode == "Perso" then abatUpdateV2PositionMarker(target) end
             if not abatState.autoBatToggled then return end
             local tr = target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") or nil
+            local th = target and target.Character and target.Character:FindFirstChildOfClass("Humanoid") or nil
             if not tr and abatState.batMode == "Perso" then abatRestoreReplicationRoot() end
+
+            -- ===== Supreme-style TP Bat V1 (direct TP + look + hit) =====
+            if abatState.batMode == "V1" then
+            if not tr or not th or th.Health <= 0 then return end
+            pcall(function()
+            local bat = abatGetBat()
+            if bat and bat.Parent ~= abatH.Parent then pcall(function() abatH:EquipTool(bat) end) end
+            end)
+            if abatH.AutoRotate then
+            pcall(function() abatH.AutoRotate = false end)
+            end
+            local aimPos = tr.Position + Vector3.new(0, 0.9, 0)
+            local dist = (abatHRP.Position - aimPos).Magnitude
+            if dist > 1.5 then
+            pcall(function()
+            abatHRP.CFrame = CFrame.new(aimPos, aimPos + tr.CFrame.LookVector)
+            abatHRP.AssemblyLinearVelocity = Vector3.zero
+            end)
+            else
+            pcall(function() abatHRP.CFrame = CFrame.lookAt(abatHRP.Position, tr.Position) end)
+            end
+            pcall(function()
+            local cam = workspace.CurrentCamera
+            if cam then cam.CFrame = CFrame.new(cam.CFrame.Position, tr.Position) end
+            end)
+            abatTryHitBat(tr)
+            return
+            end
+
+            -- ===== Supreme-style TP Bat V2 (FF + health lock + TP + hit) =====
+            if abatState.batMode == "V2" then
+            pcall(function()
+            local bat = abatGetBat()
+            if bat and bat.Parent ~= abatH.Parent then pcall(function() abatH:EquipTool(bat) end) end
+            end)
+            pcall(function()
+            abatH.MaxHealth = math.max(abatH.MaxHealth, 100)
+            abatH.Health = abatH.MaxHealth
+            abatH.BreakJointsOnDeath = false
+            abatH.RequiresNeck = false
+            abatH.PlatformStand = false
+            abatH.Sit = false
+            local st = abatH:GetState()
+            if st == Enum.HumanoidStateType.Dead or st == Enum.HumanoidStateType.Physics
+            or st == Enum.HumanoidStateType.Ragdoll or st == Enum.HumanoidStateType.FallingDown then
+            abatH:ChangeState(Enum.HumanoidStateType.Running)
+            end
+            local char = abatH.Parent
+            if char and not char:FindFirstChild("K7TPBatFF") then
+            local ff = Instance.new("ForceField")
+            ff.Name = "K7TPBatFF"
+            ff.Visible = false
+            ff.Parent = char
+            end
+            end)
+            if not tr or not th or th.Health <= 0 then return end
+            if sethiddenproperty then
+            pcall(function() sethiddenproperty(abatHRP, "PhysicsRepRootPart", tr) end)
+            end
+            local aimPos = tr.Position + Vector3.new(0, 0.85, 0)
+            local dist = (abatHRP.Position - aimPos).Magnitude
+            if dist > 2 then
+            pcall(function()
+            abatHRP.CFrame = CFrame.new(aimPos)
+            abatHRP.AssemblyLinearVelocity = Vector3.zero
+            end)
+            else
+            pcall(function() abatHRP.CFrame = CFrame.lookAt(abatHRP.Position, tr.Position) end)
+            end
+            pcall(function()
+            local cam = workspace.CurrentCamera
+            if cam then cam.CFrame = CFrame.new(cam.CFrame.Position, tr.Position) end
+            end)
+            abatTryHitBat(tr)
+            return
+            end
+
+            -- Perso / legacy path below
             if abatState.batMode == "V2" then
             local collisionTargetRoot = tr
             if not collisionTargetRoot and abatV2Safety.markerTarget and abatV2Safety.markerTarget.Character then
@@ -15380,15 +15622,9 @@
             local assigned = pcall(function() sethiddenproperty(abatHRP, "PhysicsRepRootPart", tr) end)
             if abatState.batMode == "Perso" then abatV2Safety.replicationRootAssigned = assigned end
             end
-            if abatState.batMode == "V2" then
-            local direction = tr.Position - abatHRP.Position
-            if direction.Magnitude > 8 then
-            local step = math.min(direction.Magnitude, 18)
-            pcall(function() abatHRP.CFrame = abatHRP.CFrame + direction.Unit * step end)
-            end
-            else
+            if abatState.batMode == "Perso" then
             local targetPos = tr.Position + Vector3.new(0, 0.9, 0)
-            local tpDistance = abatState.batMode == "Perso" and autoBatTpDistance or 8
+            local tpDistance = autoBatTpDistance or 8
             if (abatHRP.Position - targetPos).Magnitude > tpDistance then
             pcall(function() abatHRP.CFrame = CFrame.new(targetPos) end)
             end
