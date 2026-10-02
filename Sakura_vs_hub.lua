@@ -505,7 +505,6 @@
             local transientToggles = {
             ["Aimbot"] = true,
             ["Lagger Aimbot"] = true,
-            ["Autoplay"] = true,
             ["Lagger"] = true,
             ["Insta Reset"] = true,
             }
@@ -514,7 +513,6 @@
             ["Lagger Aimbot"] = true,
             ["Drop"] = true,
             ["TP Down"] = true,
-            ["Autoplay"] = true,
             ["Taunt"] = true,
             ["Circle Buttons"] = true,
             }
@@ -552,6 +550,7 @@
             local autoStealValues = {
             Radius      = 60,
             Duration    = 1.3,
+            AutoTPDownRadius = 25,
             }
             local autoStealMode = "v1" -- "v1" = original (hub), "v2" = Kawai Auto Grab
             _G.__ZurichAutoStealV3Variant = _G.__ZurichAutoStealV3Variant or "100"
@@ -592,28 +591,28 @@
             Bg = "BG 1",
             Accent = Color3.fromRGB(220, 30, 40),
             Backgrounds = {
-            BLACK_BLUE = "91054587901017",
-            BLACK_RED = "91054587901017",
-            BLACK_CONTRAST = "91054587901017",
-            WHITE_BLUE = "91054587901017",
-            WHITE_RED = "91054587901017",
-            WHITE_CONTRAST = "91054587901017",
+            BLACK_BLUE = "75958200457935",
+            BLACK_RED = "75958200457935",
+            BLACK_CONTRAST = "75958200457935",
+            WHITE_BLUE = "75958200457935",
+            WHITE_RED = "75958200457935",
+            WHITE_CONTRAST = "75958200457935",
             },
             BackgroundsV2 = {
-            BLACK_BLUE = "91054587901017",
-            BLACK_RED = "91054587901017",
-            BLACK_CONTRAST = "91054587901017",
-            WHITE_CONTRAST = "91054587901017",
-            WHITE_BLUE = "91054587901017",
-            WHITE_RED = "91054587901017",
+            BLACK_BLUE = "75958200457935",
+            BLACK_RED = "75958200457935",
+            BLACK_CONTRAST = "75958200457935",
+            WHITE_CONTRAST = "75958200457935",
+            WHITE_BLUE = "75958200457935",
+            WHITE_RED = "75958200457935",
             },
             MiniBackdrops = {
-            BLACK_BLUE = "91054587901017",
-            BLACK_RED = "91054587901017",
-            BLACK_CONTRAST = "91054587901017",
-            WHITE_CONTRAST = "91054587901017",
-            WHITE_BLUE = "91054587901017",
-            WHITE_RED = "91054587901017",
+            BLACK_BLUE = "75958200457935",
+            BLACK_RED = "75958200457935",
+            BLACK_CONTRAST = "75958200457935",
+            WHITE_CONTRAST = "75958200457935",
+            WHITE_BLUE = "75958200457935",
+            WHITE_RED = "75958200457935",
             }
             }
             _G.__ZurichStyle2UI.MainAccent = function()
@@ -868,6 +867,7 @@
             ["Animaciones"] = false,
             ["Custom FOV"] = false,
             ["Stretch Rez"] = false,
+            ["Auto TP Down"] = false,
             }
             for k, v in pairs(toggleDefaults) do toggleStates[k] = v end
 
@@ -1396,7 +1396,7 @@
             BgImage.Size = UDim2.new(1, 0, 1, 0)
             BgImage.Position = UDim2.new(0, 0, 0, 0)
             BgImage.BackgroundTransparency = 1
-            BgImage.Image = "rbxthumb://type=Asset&id=91054587901017&w=768&h=432"
+            BgImage.Image = "rbxthumb://type=Asset&id=75958200457935&w=768&h=432"
             -- Force red accent globally
             secondary = Color3.fromRGB(220, 30, 40)
             _G.__ZurichThemeAccent = secondary
@@ -3424,17 +3424,15 @@
             end
 
             FeatureToggles["Carry Speed"] = function()
-            if carrySpeedMode == "v2" then
-            -- v2: key press handled separately via InputBegan connection
-            return
-            end
-            toggleStates["Carry Speed"] = not toggleStates["Carry Speed"]
-            speedToggled = toggleStates["Carry Speed"]
-            if toggleVisualUpdaters["Carry Speed"] then toggleVisualUpdaters["Carry Speed"]() end
+            toggleStates["Carry Speed"] = not (toggleStates["Carry Speed"] == true)
+            speedToggled = toggleStates["Carry Speed"] == true
+            if toggleVisualUpdaters["Carry Speed"] then pcall(toggleVisualUpdaters["Carry Speed"]) end
+            if btnVisuals and btnVisuals["Carry Speed"] then pcall(btnVisuals["Carry Speed"]) end
             saveConfig()
             end
             FeaturePostToggle["Carry Speed"] = function(active)
-            speedToggled = active
+            speedToggled = active == true
+            toggleStates["Carry Speed"] = speedToggled
             end
 
             -- Puntos de entrada para controles S2 externos.
@@ -4349,6 +4347,70 @@
 
             _G["ExecuteTPDown"] = executeTPDown
             FeatureToggles["TP Down"] = executeTPDown
+
+            local autoTPDownConn = nil
+            local autoTPDownCd = 0
+            local function atpdHoldingPet()
+            -- Steal a Brainrot: pet in hand = Stealing attribute
+            if Player:GetAttribute("Stealing") == true then return true end
+            local char = Player.Character
+            if not char then return false end
+            if char:GetAttribute("Stealing") == true or char:GetAttribute("Carrying") == true then return true end
+            for attrName, attrValue in pairs(char:GetAttributes()) do
+            local name = string.lower(tostring(attrName))
+            if attrValue == true and (string.find(name, "steal", 1, true) or string.find(name, "carry", 1, true) or string.find(name, "holding", 1, true)) then
+            return true
+            end
+            end
+            -- Fallback: non-bat tool equipped
+            for _, child in ipairs(char:GetChildren()) do
+            if child:IsA("Tool") then
+            local n = string.lower(tostring(child.Name))
+            if n ~= "bat" and not string.find(n, "medusa", 1, true) and not string.find(n, "hammer", 1, true) then
+            return true
+            end
+            end
+            end
+            return false
+            end
+            local function atpdEnemyNear(radius)
+            local char = Player.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return false end
+            radius = tonumber(radius) or 25
+            for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= Player and plr.Character then
+            local tr = plr.Character:FindFirstChild("HumanoidRootPart")
+            if tr and (tr.Position - hrp.Position).Magnitude <= radius then
+            return true
+            end
+            end
+            end
+            return false
+            end
+            local function stopAutoTPDown()
+            if autoTPDownConn then pcall(function() autoTPDownConn:Disconnect() end); autoTPDownConn = nil end
+            end
+            local function startAutoTPDown()
+            stopAutoTPDown()
+            autoTPDownConn = RunService.Heartbeat:Connect(function()
+            if toggleStates["Auto TP Down"] ~= true then return end
+            -- Only while holding pet (Stealing)
+            if not atpdHoldingPet() then return end
+            local now = tick()
+            if now < autoTPDownCd then return end
+            local char = Player.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            if hrp and hrp.Position.Y > -5 then
+            pcall(executeTPDown)
+            autoTPDownCd = now + 0.35
+            end
+            end)
+            end
+            FeaturePostToggle["Auto TP Down"] = function(active)
+            if active then startAutoTPDown() else stopAutoTPDown() end
+            end
+            if toggleStates["Auto TP Down"] then task.defer(function() pcall(startAutoTPDown) end) end
             end
             -- ==================== DROP (nueva lógica brainrot) ====================
             do
@@ -5772,8 +5834,8 @@
 
             local agFps = 60; local agFrameCount = 0; local agLastTick = 0; local agStatsConn = nil
             local function autoGrabBaseSize()
-            if _G.__ZurichAutoGrabGuiStyle == "V2" then return 200, 48 end
-            return 260, 42
+            if _G.__ZurichAutoGrabGuiStyle == "V2" then return 150, 150 end
+            return 150, 150
             end
             _G.__ZurichAutoGrabBaseSize = autoGrabBaseSize
             local function createProgressGui()
@@ -5822,11 +5884,45 @@
             _G.__ZurichRegisterThemeRoot(pillFrame)
             pillFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
             pillFrame.BorderSizePixel = 0
-            Instance.new("UICorner", pillFrame).CornerRadius = UDim.new(0, 18)
+            Instance.new("UICorner", pillFrame).CornerRadius = UDim.new(0, 14)
             local pillStroke = Instance.new("UIStroke", pillFrame)
             pillStroke.Color = Color3.fromRGB(220, 30, 40)
             pillStroke.Thickness = 1.5
             pillStroke.Transparency = 0.22
+
+            local scaleMinus = Instance.new("TextButton", pillFrame)
+            scaleMinus.Name = "ScaleMinus"
+            scaleMinus.Size = UDim2.new(0, 28, 0, 28)
+            scaleMinus.Position = UDim2.new(0, 6, 1, -34)
+            scaleMinus.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+            scaleMinus.BorderSizePixel = 0
+            scaleMinus.Text = "-"
+            scaleMinus.TextColor3 = Color3.fromRGB(255, 255, 255)
+            scaleMinus.Font = Enum.Font.GothamBold
+            scaleMinus.TextSize = 16
+            scaleMinus.ZIndex = 20
+            scaleMinus.AutoButtonColor = false
+            Instance.new("UICorner", scaleMinus).CornerRadius = UDim.new(0, 8)
+            local scalePlus = Instance.new("TextButton", pillFrame)
+            scalePlus.Name = "ScalePlus"
+            scalePlus.Size = UDim2.new(0, 28, 0, 28)
+            scalePlus.Position = UDim2.new(1, -34, 1, -34)
+            scalePlus.BackgroundColor3 = Color3.fromRGB(220, 30, 40)
+            scalePlus.BorderSizePixel = 0
+            scalePlus.Text = "+"
+            scalePlus.TextColor3 = Color3.fromRGB(255, 255, 255)
+            scalePlus.Font = Enum.Font.GothamBold
+            scalePlus.TextSize = 16
+            scalePlus.ZIndex = 20
+            scalePlus.AutoButtonColor = false
+            Instance.new("UICorner", scalePlus).CornerRadius = UDim.new(0, 8)
+            local function changeAgScale(delta)
+            speedValues.AutoGrabGuiScale = math.clamp((tonumber(speedValues.AutoGrabGuiScale) or 0.55) + delta, 0.40, 1.20)
+            if _G.__ZurichApplyAutoGrabScale then _G.__ZurichApplyAutoGrabScale(true) end
+            saveConfig()
+            end
+            scaleMinus.MouseButton1Click:Connect(function() changeAgScale(-0.08) end)
+            scalePlus.MouseButton1Click:Connect(function() changeAgScale(0.08) end)
 
             local content = Instance.new("Frame", pillFrame)
             content.Name = "Content"
@@ -9175,6 +9271,42 @@
             return 34
             end)
             makeToggle(movementSection, "TP Down", "TP Down")
+            makeToggle(movementSection, "Auto TP Down", "Auto TP Down", function(ext)
+            local row = Instance.new("Frame", ext)
+            row.Size = UDim2.new(1, -8, 0, 28)
+            row.Position = UDim2.new(0, 4, 0, 4)
+            row.BackgroundTransparency = 1
+            local lbl = Instance.new("TextLabel", row)
+            lbl.Size = UDim2.new(0.55, 0, 1, 0)
+            lbl.BackgroundTransparency = 1
+            lbl.Text = "Radius (0=always)"
+            lbl.TextColor3 = Color3.fromRGB(200, 200, 210)
+            lbl.Font = Enum.Font.Gotham
+            lbl.TextSize = 11
+            lbl.TextXAlignment = Enum.TextXAlignment.Left
+            local box = Instance.new("TextBox", row)
+            box.Size = UDim2.new(0, 50, 0, 24)
+            box.Position = UDim2.new(1, -54, 0.5, -12)
+            box.BackgroundColor3 = Color3.fromRGB(20, 20, 28)
+            box.BorderSizePixel = 0
+            box.Text = tostring(autoStealValues.AutoTPDownRadius or 25)
+            box.TextColor3 = Color3.fromRGB(245, 245, 250)
+            box.Font = Enum.Font.GothamBold
+            box.TextSize = 12
+            box.ClearTextOnFocus = false
+            Instance.new("UICorner", box).CornerRadius = UDim.new(0, 6)
+            box.FocusLost:Connect(function()
+            local n = tonumber(box.Text)
+            if n then
+            autoStealValues.AutoTPDownRadius = math.clamp(math.floor(n + 0.5), 0, 200)
+            box.Text = tostring(autoStealValues.AutoTPDownRadius)
+            saveConfig()
+            else
+            box.Text = tostring(autoStealValues.AutoTPDownRadius or 25)
+            end
+            end)
+            return 34
+            end)
             -- Auto lagger speed removed
             makeToggleNoKeybind(movementSection, "No Animation", "No Animation")
 
@@ -9192,7 +9324,7 @@
             makeToggleNoKeybind(combatSection, "Anti Bat · Sakura.vs", "Anti Bat")
 
             _G.__ZurichMakeSubheader(combatSection, "ASISTENCIA DE PUNTERIA")
-            makeToggle(combatSection, "Auto Bat", "AutoBat", function(ext)
+            makeToggle(combatSection, "TP Bat", "AutoBat", function(ext)
             local configPanel = nil
             local v3ModePanel = nil
             local function refreshAutoBatModePanels()
@@ -9581,12 +9713,6 @@
             -- FARMING / AUTO (integrated into Combat)
             local farmingSection = combatSection
             _G.__ZurichMakeSubheader(farmingSection, "AUTOMATIZACION")
-            makeToggle(farmingSection, "Autoplay", "Autoplay", function(ext)
-            makeModeSelector(ext, {"Full", "Semi"}, _G.__autoplayMode or "Full", function(selected)
-            _G.__autoplayMode = selected
-            saveConfig()
-            end)
-            end)
             makeToggle(farmingSection, "Drop", "Drop")
             makeToggleNoKeybind(farmingSection, "E01 Warning", "E01 Warning")
             makeToggle(farmingSection, "Auto Grab", "auto steal", function(extension)
@@ -9723,12 +9849,12 @@
             local primaryButtons = {}
             local secondaryButtons = {}
             local themeImages = {
-            BLACK_BLUE = "91054587901017",
-            BLACK_RED = "91054587901017",
-            BLACK_CONTRAST = "91054587901017",
-            WHITE_BLUE = "91054587901017",
-            WHITE_RED = "91054587901017",
-            WHITE_CONTRAST = "91054587901017",
+            BLACK_BLUE = "75958200457935",
+            BLACK_RED = "75958200457935",
+            BLACK_CONTRAST = "75958200457935",
+            WHITE_BLUE = "75958200457935",
+            WHITE_RED = "75958200457935",
+            WHITE_CONTRAST = "75958200457935",
             }
 
             local function palette()
@@ -9799,7 +9925,7 @@
             FPSLabel.TextStrokeColor3 = secondary
             BgImage.ImageTransparency = 0.2
             BgImage.ImageColor3 = Color3.fromRGB(255, 255, 255)
-            BgImage.Image = "rbxthumb://type=Asset&id=91054587901017&w=768&h=432"
+            BgImage.Image = "rbxthumb://type=Asset&id=75958200457935&w=768&h=432"
             BgImage.Visible = true
 
             applyObjectTheme(Panel, mainSurface, mainText, secondary)
@@ -11429,7 +11555,7 @@
             if minCorner then minCorner.CornerRadius = UDim.new(0,14) end
             BgImage.ImageTransparency = 0
             BgImage.ImageColor3 = Color3.fromRGB(255,255,255)
-            BgImage.Image = "rbxthumb://type=Asset&id=91054587901017&w=768&h=432"
+            BgImage.Image = "rbxthumb://type=Asset&id=75958200457935&w=768&h=432"
             _G.__ZurichStyle2UI.Header.Visible = true
             _G.__ZurichStyle2UI.NavFrame.Visible = true
             _G.__ZurichStyle2UI.NavFrame.BackgroundTransparency = 1
@@ -11502,7 +11628,7 @@
             pcall(applyGuiStyle, _G.__ZurichStyle2UI.Mode)
             ScreenGui.Enabled = true
             Panel.Visible = true
-            BgImage.Image = "rbxthumb://type=Asset&id=91054587901017&w=768&h=432"
+            BgImage.Image = "rbxthumb://type=Asset&id=75958200457935&w=768&h=432"
             BgImage.ImageTransparency = 0.25
             BgImage.Visible = true
             BgImage.ImageColor3 = Color3.fromRGB(255, 255, 255)
@@ -12255,17 +12381,14 @@
             -- 1. CONFIGURACI N DE BOTONES INDEPENDIENTES
             local mobileButtonConfigs = {
             { name = "Drop", label = "DROP", x = 15, y = 243 },
-            { name = "Auto Bat", label = "AUTO BAT", x = 78, y = 243 },
+            { name = "Auto Bat", label = "TP BAT", x = 78, y = 243 },
             { name = "TP Down", label = "TP DOWN", x = 15, y = 306 },
             { name = "Carry Speed", label = "CARRY SPEED", x = 78, y = 306 },
             { name = "Insta Reset", label = "INSTA RESET", x = 15, y = 369 },
             { name = "Aimbot", label = "AIMBOT", x = 78, y = 369 },
-            -- { name = "Lagger Aimbot", label = "LAGGER AIM", x = 15, y = 432 },
-            { name = "Autoplay", label = "AUTOPLAY", x = 78, y = 432 },
-            { name = "Taunt", label = "TAUNT", x = 15, y = 495 },
-            { name = "LockPos", label = "LOCK", x = 78, y = 495 },
-            { name = "TP Bat", label = "TP BAT", x = 15, y = 558 },
-            { name = "Speed Mode", label = "NORMAL\nSPEED", x = 78, y = 558 },
+            { name = "Taunt", label = "TAUNT", x = 15, y = 432 },
+            { name = "LockPos", label = "LOCK", x = 78, y = 432 },
+            { name = "Speed Mode", label = "NORMAL\nSPEED", x = 15, y = 495 },
             }
             _G.__mobileBtnConfigs = mobileButtonConfigs
 
@@ -12293,9 +12416,12 @@
             return
             end
 
-            if featureName == "TP Bat" then
-            if _G.zurichAutoBat and _G.zurichAutoBat.Toggle then _G.zurichAutoBat.Toggle() end
-            if btnVisuals[featureName] then btnVisuals[featureName]() end
+            if featureName == "Carry Speed" then
+            toggleStates["Carry Speed"] = not (toggleStates["Carry Speed"] == true)
+            speedToggled = toggleStates["Carry Speed"] == true
+            if toggleVisualUpdaters["Carry Speed"] then pcall(toggleVisualUpdaters["Carry Speed"]) end
+            if btnVisuals and btnVisuals["Carry Speed"] then pcall(btnVisuals["Carry Speed"]) end
+            saveConfig()
             return
             end
 
@@ -12414,6 +12540,7 @@
             end
             local active = (mobileShortcutStates[feat.name] or false) or (toggleStates[feat.name] or false)
             if feat.name == "Auto Bat" and _G.__getAutoBat then active = _G.__getAutoBat() end
+            if feat.name == "Carry Speed" then active = speedToggled == true or toggleStates["Carry Speed"] == true end
             if isMobile then
             TweenService:Create(btn, TweenInfo.new(0.15), {
             BackgroundColor3 = active and Color3.fromRGB(220, 30, 40) or Color3.fromRGB(0, 0, 0),
@@ -12464,20 +12591,10 @@
             saveConfig()
             end
             pressing = false; dragging = false; dragInput = nil
+            if updateBtnVisual then updateBtnVisual() end
             end
             end)
-            btn.MouseEnter:Connect(function()
-            if not ((mobileShortcutStates[feat.name] or false) or (toggleStates[feat.name] or false)) then
-            TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(220, 30, 40)}):Play()
-            TweenService:Create(label, TweenInfo.new(0.12), {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-            end
-            end)
-            btn.MouseLeave:Connect(function()
-            if not ((mobileShortcutStates[feat.name] or false) or (toggleStates[feat.name] or false)) then
-            TweenService:Create(btn, TweenInfo.new(0.12), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
-            TweenService:Create(label, TweenInfo.new(0.12), {TextColor3 = Color3.fromRGB(220, 30, 40)}):Play()
-            end
-            end)
+            -- no hover flash on mobile; active state only via updateBtnVisual
             else
             local dragging = false
             local dragInput, dragStart, startPos
