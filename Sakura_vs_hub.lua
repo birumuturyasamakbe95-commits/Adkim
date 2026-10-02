@@ -9240,7 +9240,7 @@
             end)
             makeToggle(movementSection, "TP Down", "TP Down")
             makeToggle(movementSection, "Auto TP Down", "Auto TP Down", function(ext)
-            makeUraniumSlider(ext, "Radius (0=always)", "AutoTPDownRadius", 0, 100)
+            makeUraniumSlider(ext, "Radius (0=always)", "AutoTPDownRadius", 0, 100, function(v) return tostring(math.floor(v + 0.5)) end)
             return 40
             end)
             -- Auto lagger speed removed
