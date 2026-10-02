@@ -7513,7 +7513,14 @@
             if markedDirection.Magnitude > 0.1 then updateRotationAngular(markedDirection, rootPart) end
             if markedDirection.Magnitude > CFG.MIN_FOLLOW_DISTANCE then
             local markedSpeed = tonumber(speedValues.ZurichAimbotApproachSpeed) or CFG.FOLLOW_SPEED
-            rootPart.AssemblyLinearVelocity = markedDirection.Unit * math.clamp(markedSpeed, 1, 120)
+            markedSpeed = math.clamp(markedSpeed, 1, 120)
+            if markedDirection.Magnitude > 14 then
+            pcall(function()
+            local snap = markedPosition - markedDirection.Unit * 2.5
+            rootPart.CFrame = CFrame.new(snap, markedPosition)
+            end)
+            end
+            rootPart.AssemblyLinearVelocity = markedDirection.Unit * markedSpeed
             else
             rootPart.AssemblyLinearVelocity = Vector3.zero
             end
@@ -7690,11 +7697,21 @@
             end
             end
             local direction = interceptPoint - myPos
-            if direction.Magnitude > CFG.MIN_FOLLOW_DISTANCE then
+            local dist = direction.Magnitude
+            if dist > CFG.MIN_FOLLOW_DISTANCE then
             local dirUnit = direction.Unit
             local currentSpeed = tonumber(speedValues.ZurichAimbotApproachSpeed) or CFG.FOLLOW_SPEED
             currentSpeed = math.clamp(currentSpeed, 1, 120)
+            -- Auto TP when far (Bat x TP)
+            if dist > 14 then
+            pcall(function()
+            local snap = interceptPoint - dirUnit * 2.5
+            rootPart.CFrame = CFrame.new(snap, interceptPoint)
             rootPart.AssemblyLinearVelocity = dirUnit * currentSpeed
+            end)
+            else
+            rootPart.AssemblyLinearVelocity = dirUnit * currentSpeed
+            end
             else
             rootPart.AssemblyLinearVelocity = Vector3.new(0, rootPart.AssemblyLinearVelocity.Y * 0.5, 0)
             end
@@ -7737,38 +7754,51 @@
             end)
 
             FeaturePostToggle["Aimbot"] = function(active)
+            -- Bat x TP = normal follow aimbot only (does NOT touch TP Bat)
             if active then
             if _G.__stopSpeedBoost then _G.__stopSpeedBoost() end
-            if autoplayActive or toggleStates["Autoplay"] then
             pcall(function() if _G.__stopAutoplay then _G.__stopAutoplay() end end)
-            end
             deactivateOtherAimbots("Aimbot")
-            if _G.__deactivateBatExclusive then _G.__deactivateBatExclusive("Aimbot") end
-            if (_G.__ZurichAimbotMode or "Normal") == "Bypass" then
-            pcall(function() if _cypherStop then _cypherStop() end end)
-            -- enable bypass aimbot engine (shared)
-            if _G.__ZurichStartBypassAimbot then
-            -- Bypass tick checks abatState — force via dedicated aimbot flag
-            _G.__ZurichBypassAimbotFromAimbot = true
-            pcall(_G.__ZurichStartBypassAimbot)
+            -- turn off Bat Bypass only (not TP Bat)
+            if toggleStates["Bat Bypass"] then
+            toggleStates["Bat Bypass"] = false
+            if FeaturePostToggle["Bat Bypass"] then pcall(FeaturePostToggle["Bat Bypass"], false) end
+            if toggleVisualUpdaters["Bat Bypass"] then pcall(toggleVisualUpdaters["Bat Bypass"]) end
             end
-            else
             _G.__ZurichBypassAimbotFromAimbot = false
             if _G.__ZurichStopBypassAimbot then pcall(_G.__ZurichStopBypassAimbot) end
             _G.__checkAndAutoDrop(function()
             local char = Player.Character
             if char then _cypherStartFollowing(char) end
             end)
-            end
             else
-            _G.__ZurichBypassAimbotFromAimbot = false
-            if _G.__ZurichStopBypassAimbot then pcall(_G.__ZurichStopBypassAimbot) end
             pcall(function() if _cypherStop then _cypherStop() end end)
             if _G.__refreshSpeedBoost then _G.__refreshSpeedBoost() end
             end
             end
             end
 
+
+
+            FeaturePostToggle["Bat Bypass"] = function(active)
+            -- Supreme Bypass aimbot only — does not enable TP Bat
+            if active then
+            if toggleStates["Aimbot"] then
+            toggleStates["Aimbot"] = false
+            pcall(function() if _cypherStop then _cypherStop() end end)
+            if toggleVisualUpdaters["Aimbot"] then pcall(toggleVisualUpdaters["Aimbot"]) end
+            end
+            deactivateOtherAimbots("Aimbot")
+            _G.__ZurichBypassAimbotFromAimbot = true
+            if _G.__ZurichStartBypassAimbot then pcall(_G.__ZurichStartBypassAimbot) end
+            else
+            _G.__ZurichBypassAimbotFromAimbot = false
+            if _G.__ZurichStopBypassAimbot then pcall(_G.__ZurichStopBypassAimbot) end
+            end
+            if _G.__btnVisuals then
+            for _, v in pairs(_G.__btnVisuals) do pcall(v) end
+            end
+            end
 
             FeaturePostToggle["Anti Die"] = function(active)
             if active then
@@ -8747,6 +8777,14 @@
             sideTabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
             sideTabLayout.VerticalAlignment = Enum.VerticalAlignment.Center
             sideTabLayout.Padding = UDim.new(0, tabButtonGap)
+            sideTabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            -- force right pack: flexible spacer on the left
+            local tabLeftSpacer = Instance.new("Frame", sideTabContainer)
+            tabLeftSpacer.Name = "TabLeftSpacer"
+            tabLeftSpacer.BackgroundTransparency = 1
+            tabLeftSpacer.BorderSizePixel = 0
+            tabLeftSpacer.Size = UDim2.new(1, -(4 * (isMobile and 64 or 72) + 3 * tabButtonGap), 1, 0)
+            tabLeftSpacer.LayoutOrder = 0
 
             -- Nombres exactos de las secciones
             local tabDisplayNames = {
@@ -8765,10 +8803,11 @@
             Animations = {title="Settings", desc="Animation presets and character motion", count="04 / 04"},
             }
 
-            for _, name in ipairs(tabNames) do
+            for ti, name in ipairs(tabNames) do
             local displayName = tabDisplayNames[name] or name
             local button = Instance.new("TextButton", sideTabContainer)
-            button.Size = UDim2.new(0.25, -4, 1, 0)
+            button.Size = UDim2.new(0, isMobile and 64 or 72, 1, 0)
+            button.LayoutOrder = ti
             button.BackgroundColor3 = Color3.fromRGB(3, 16, 38)
             button.BackgroundTransparency = 1
             button.BorderSizePixel = 0
@@ -9657,25 +9696,11 @@
             end)
             end -- Lagger Aimbot UI disabled
 
-            makeToggle(combatSection, "Aimbot", "Aimbot", function(ext)
-            local modeFrame = Instance.new("Frame", ext)
-            modeFrame.Size = UDim2.new(1, -8, 0, 34)
-            modeFrame.Position = UDim2.new(0, 4, 0, 2)
-            modeFrame.BackgroundTransparency = 1
-            makeModeSelector(modeFrame, {"Normal", "Bypass"}, _G.__ZurichAimbotMode or "Normal", function(mode)
-            _G.__ZurichAimbotMode = mode
-            if toggleStates["Aimbot"] then
-            -- re-apply via FeaturePostToggle so correct engine starts
-            if FeaturePostToggle["Aimbot"] then
-            pcall(FeaturePostToggle["Aimbot"], false)
-            pcall(FeaturePostToggle["Aimbot"], true)
-            end
-            end
-            saveConfig()
-            end)
+            makeToggleNoKeybind(combatSection, "Bat Bypass", "Bat Bypass")
+            makeToggle(combatSection, "Bat x TP", "Aimbot", function(ext)
             local sliderContainer = Instance.new("Frame", ext)
             sliderContainer.Size = UDim2.new(1, -16, 0, 72)
-            sliderContainer.Position = UDim2.new(0, 8, 0, 38)
+            sliderContainer.Position = UDim2.new(0, 8, 0, 8)
             sliderContainer.BackgroundTransparency = 1
 
             local card = Instance.new("Frame", sliderContainer)
@@ -11671,21 +11696,25 @@
             sideTabContainer.Position = UDim2.new(0,22,0,78)
             ContentArea.Size = UDim2.new(1,-28,1,-124)
             ContentArea.Position = UDim2.new(0,14,0,114)
+            if sideTabLayout then
+            sideTabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+            sideTabLayout.FillDirection = Enum.FillDirection.Horizontal
+            end
             for name, button in pairs(tabButtons) do
             button.Text = gui2TabNames[name] or name
-            button.Size = UDim2.new(0.25,-5,1,0)
+            button.Size = UDim2.new(0, isMobile and 64 or 72, 1, 0)
             local tabAccent = button:FindFirstChild("TabAccent")
             if not tabAccent then
             tabAccent = Instance.new("Frame",button)
             tabAccent.Name = "TabAccent"
-            tabAccent.Size = UDim2.new(1,-30,0,2)
-            tabAccent.Position = UDim2.new(0,15,1,-3)
+            tabAccent.Size = UDim2.new(1,-12,0,2)
+            tabAccent.Position = UDim2.new(0,6,1,-3)
             tabAccent.BorderSizePixel = 0
             tabAccent.ZIndex = button.ZIndex+1
             Instance.new("UICorner",tabAccent).CornerRadius = UDim.new(1,0)
             end
-            tabAccent.Size = UDim2.new(1,-30,0,2)
-            tabAccent.Position = UDim2.new(0,15,1,-3)
+            tabAccent.Size = UDim2.new(1,-12,0,2)
+            tabAccent.Position = UDim2.new(0,6,1,-3)
             tabAccent.Visible = true
             end
             applyStyle2Cards()
@@ -11693,6 +11722,14 @@
 
             local function applyGuiStyle(style)
             _G.__ZurichStyle2UI.Mode = style == "GUI 2" and "GUI 2" or "GUI 1"
+            if sideTabLayout then
+            sideTabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+            end
+            if tabButtons then
+            for _, button in pairs(tabButtons) do
+            button.Size = UDim2.new(0, isMobile and 64 or 72, 1, 0)
+            end
+            end
             local oldPosition = Panel.Position
             if _G.__ZurichStyle2UI.Mode == "GUI 2" then
             applyGui2RootLayout()
@@ -12475,10 +12512,11 @@
             { name = "TP Down", label = "TP DOWN", x = 15, y = 306 },
             { name = "Carry Speed", label = "CARRY SPEED", x = 78, y = 306 },
             { name = "Insta Reset", label = "INSTA RESET", x = 15, y = 369 },
-            { name = "Aimbot", label = "AIMBOT", x = 78, y = 369 },
-            { name = "Taunt", label = "TAUNT", x = 15, y = 432 },
-            { name = "LockPos", label = "LOCK", x = 78, y = 432 },
-            { name = "Speed Mode", label = "NORMAL\nSPEED", x = 15, y = 495 },
+            { name = "Aimbot", label = "BAT x TP", x = 78, y = 369 },
+            { name = "Bat Bypass", label = "BAT\nBYPASS", x = 15, y = 432 },
+            { name = "Taunt", label = "TAUNT", x = 78, y = 432 },
+            { name = "LockPos", label = "LOCK", x = 15, y = 495 },
+            { name = "Speed Mode", label = "NORMAL\nSPEED", x = 78, y = 495 },
             }
             _G.__mobileBtnConfigs = mobileButtonConfigs
 
@@ -12515,10 +12553,19 @@
             return
             end
 
+            if featureName == "Bat Bypass" then
+            local on = not (toggleStates["Bat Bypass"] == true)
+            toggleStates["Bat Bypass"] = on
+            if FeaturePostToggle["Bat Bypass"] then pcall(FeaturePostToggle["Bat Bypass"], on) end
+            if toggleVisualUpdaters["Bat Bypass"] then pcall(toggleVisualUpdaters["Bat Bypass"]) end
+            for _, v in pairs(btnVisuals) do pcall(v) end
+            saveConfig()
+            return
+            end
+
             if featureName == "Auto Bat" then
             local isActive = _G.__getAutoBat and _G.__getAutoBat() or false
             if _G.__setAutoBat then _G.__setAutoBat(not isActive) end
-            -- refresh every mobile button so Aimbot etc. don't stay stuck red
             for _, v in pairs(btnVisuals) do pcall(v) end
             return
             end
@@ -12634,6 +12681,7 @@
             end
             local active = (mobileShortcutStates[feat.name] or false) or (toggleStates[feat.name] or false)
             if feat.name == "Auto Bat" and _G.__getAutoBat then active = _G.__getAutoBat() end
+            if feat.name == "Bat Bypass" then active = toggleStates["Bat Bypass"] == true end
             if feat.name == "Carry Speed" then active = speedToggled == true or toggleStates["Carry Speed"] == true end
             if isMobile then
             -- active: red bg + white text | inactive: black bg + red text
