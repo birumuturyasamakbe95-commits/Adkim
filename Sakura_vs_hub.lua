@@ -552,7 +552,6 @@
             local autoStealValues = {
             Radius      = 60,
             Duration    = 1.3,
-            AutoTPDownRadius = 25,
             }
             local autoStealMode = "v1" -- "v1" = original (hub), "v2" = Kawai Auto Grab
             _G.__ZurichAutoStealV3Variant = _G.__ZurichAutoStealV3Variant or "100"
@@ -869,8 +868,6 @@
             ["Animaciones"] = false,
             ["Custom FOV"] = false,
             ["Stretch Rez"] = false,
-            ["Auto TP Down"] = false,
-            ["UI Lock"] = false,
             }
             for k, v in pairs(toggleDefaults) do toggleStates[k] = v end
 
@@ -1631,7 +1628,7 @@
             ConnLabel.ZIndex = 5
             ConnLabel.Parent = ConnectedBadge
 
-            local mobileUiLocked = toggleStates["UI Lock"] == true
+            local mobileUiLocked = false
             local Scroll = nil
 
             -- Drag SOLO desde el sidebar header (titulo); click izquierdo en PC o dedo en movil
@@ -4352,67 +4349,6 @@
 
             _G["ExecuteTPDown"] = executeTPDown
             FeatureToggles["TP Down"] = executeTPDown
-
-            -- Auto TP Down: only while holding a pet (non-Bat tool), optional enemy radius
-            local autoTPDownConn = nil
-            local autoTPDownCooldownUntil = 0
-            local function isHoldingPet()
-            local char = Player.Character
-            if not char then return false end
-            for _, child in ipairs(char:GetChildren()) do
-            if child:IsA("Tool") then
-            local n = string.lower(child.Name)
-            if n ~= "bat" and not string.find(n, "medusa", 1, true) and not string.find(n, "sword", 1, true) then
-            return true
-            end
-            end
-            end
-            return false
-            end
-            local function enemyWithinRadius(radius)
-            local char = Player.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if not hrp then return false end
-            radius = tonumber(radius) or 25
-            for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= Player and p.Character then
-            local tr = p.Character:FindFirstChild("HumanoidRootPart")
-            if tr and (tr.Position - hrp.Position).Magnitude <= radius then
-            return true
-            end
-            end
-            end
-            return false
-            end
-            local function stopAutoTPDown()
-            if autoTPDownConn then
-            pcall(function() autoTPDownConn:Disconnect() end)
-            autoTPDownConn = nil
-            end
-            end
-            local function startAutoTPDown()
-            stopAutoTPDown()
-            autoTPDownConn = RunService.Heartbeat:Connect(function()
-            if not toggleStates["Auto TP Down"] then return end
-            if not isHoldingPet() then return end
-            local radius = tonumber(autoStealValues.AutoTPDownRadius) or 25
-            -- Radius 0 = always while holding pet; otherwise only if enemy nearby
-            if radius > 0 and not enemyWithinRadius(radius) then return end
-            local now = tick()
-            if now < autoTPDownCooldownUntil then return end
-            local char = Player.Character
-            local hrp = char and char:FindFirstChild("HumanoidRootPart")
-            if not hrp then return end
-            if hrp.Position.Y > -5 then
-            executeTPDown()
-            autoTPDownCooldownUntil = now + 0.35
-            end
-            end)
-            end
-            FeaturePostToggle["Auto TP Down"] = function(active)
-            if active then startAutoTPDown() else stopAutoTPDown() end
-            end
-            if toggleStates["Auto TP Down"] then task.defer(startAutoTPDown) end
             end
             -- ==================== DROP (nueva lógica brainrot) ====================
             do
@@ -8641,7 +8577,7 @@
 
             local sideTabLayout = Instance.new("UIListLayout", sideTabContainer)
             sideTabLayout.FillDirection = Enum.FillDirection.Horizontal
-            sideTabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+            sideTabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
             sideTabLayout.VerticalAlignment = Enum.VerticalAlignment.Center
             sideTabLayout.Padding = UDim.new(0, tabButtonGap)
 
@@ -9239,10 +9175,6 @@
             return 34
             end)
             makeToggle(movementSection, "TP Down", "TP Down")
-            makeToggle(movementSection, "Auto TP Down", "Auto TP Down", function(ext)
-            makeUraniumSlider(ext, "Radius (0=always)", "AutoTPDownRadius", 0, 100, function(v) return tostring(math.floor(v + 0.5)) end)
-            return 40
-            end)
             -- Auto lagger speed removed
             makeToggleNoKeybind(movementSection, "No Animation", "No Animation")
 
@@ -10884,37 +10816,6 @@
             box:CaptureFocus()
             end
             connectBtn(importButton, openImportDialog)
-
-            -- UI Lock (prevents dragging main panel / mobile buttons)
-            local lockRow = Instance.new("Frame", visualSection)
-            lockRow.Name = "UILockRow"
-            lockRow.Size = UDim2.new(1, -2, 0, 40)
-            lockRow.BackgroundTransparency = 1
-            lockRow.LayoutOrder = 1001
-            local lockBtn = Instance.new("TextButton", lockRow)
-            lockBtn.Name = "UILockBtn"
-            lockBtn.Size = UDim2.new(1, 0, 0, 36)
-            lockBtn.BackgroundColor3 = Color3.fromRGB(3, 16, 38)
-            lockBtn.BackgroundTransparency = 0.22
-            lockBtn.BorderSizePixel = 0
-            lockBtn.Text = mobileUiLocked and "UI LOCK  ·  ON" or "UI LOCK  ·  OFF"
-            lockBtn.TextColor3 = Color3.fromRGB(245, 248, 255)
-            lockBtn.TextSize = 11
-            lockBtn.Font = Enum.Font.GothamBold
-            lockBtn.AutoButtonColor = false
-            Instance.new("UICorner", lockBtn).CornerRadius = UDim.new(0, 8)
-            local lockStroke = Instance.new("UIStroke", lockBtn)
-            lockStroke.Color = _G.__ZurichCurrentThemeAccent and _G.__ZurichCurrentThemeAccent() or Color3.fromRGB(220, 30, 40)
-            lockStroke.Thickness = 1
-            lockStroke.Transparency = 0.35
-            connectBtn(lockBtn, function()
-            mobileUiLocked = not mobileUiLocked
-            toggleStates["UI Lock"] = mobileUiLocked
-            lockBtn.Text = mobileUiLocked and "UI LOCK  ·  ON" or "UI LOCK  ·  OFF"
-            lockStroke.Color = mobileUiLocked and Color3.fromRGB(80, 220, 120) or (_G.__ZurichCurrentThemeAccent and _G.__ZurichCurrentThemeAccent() or Color3.fromRGB(220, 30, 40))
-            if btnVisuals and btnVisuals["LockPos"] then pcall(btnVisuals["LockPos"]) end
-            saveConfig()
-            end)
             end)()
 
             -- ANIMATIONS
